@@ -1,0 +1,35 @@
+{
+  "station_seed_rows": 6560,
+  "methods": 8,
+  "seeds": 5,
+  "stations_per_method_seed": 164,
+  "common_metrics": [
+    "NSE",
+    "KGE",
+    "PBIAS",
+    "FHV",
+    "FLV",
+    "VR",
+    "aNSE",
+    "NSE_below_0_percent",
+    "NSE_above_0_5_percent"
+  ],
+  "section_tables": {
+    "5.1": [
+      "PILRN-S",
+      "Regional LSTM",
+      "Nearest+DAR",
+      "IDW+DAR",
+      "Random forest"
+    ],
+    "5.2": [
+      "PILRN-S",
+      "Coupled from scratch",
+      "Coupled warm-start"
+    ],
+    "5.3": [
+      "PILRN-S",
+      "GAT"
+    ]
+  }
+}

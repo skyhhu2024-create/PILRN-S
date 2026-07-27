@@ -1,0 +1,15 @@
+{
+  "aggregation": "station median within each seed, followed by the median of the five seed-specific summaries",
+  "period": "full study period for headline metrics",
+  "reference": "observed discharge",
+  "NSE": "Nash-Sutcliffe efficiency",
+  "KGE": "Kling-Gupta efficiency",
+  "PBIAS": "overall volume bias (%)",
+  "FHV": "volume bias for months with observed flow >= station Q90 (%)",
+  "FLV": "volume bias for months with observed flow <= station Q30 (%)",
+  "VR": "standard deviation(prediction) / standard deviation(observation)",
+  "aNSE": "NSE after subtracting the station's training-period observed monthly climatology from observations and predictions",
+  "NSE_below_0_percent": "percentage of scored stations with NSE < 0",
+  "NSE_above_0_5_percent": "percentage of scored stations with NSE > 0.5",
+  "deterministic_baselines": "nearest+DAR, IDW+DAR and RF predictions are repeated across seed labels solely for paired aggregation"
+}

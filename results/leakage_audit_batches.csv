@@ -1,0 +1,6 @@
+batch,scope,cells_expected,cells_audited,cells_passed,all_passed,months,max_canary_prediction_difference,max_archive_reproduction_difference
+physical_v4_core,"main;ablation;density;round_sweep;components",1040,1040,1040,true,297,0.0,0.0242477363444777
+final_v5,"final_pilrn;final_topology;final_coupled;final_density",260,260,260,true,297,0.0,0.0022004678767189034
+density_baselines_v6,"random_forest;nearest_dar",140,140,140,true,297,0.0,
+density_coupled_warm_v6,final_density_coupled,60,60,60,true,297,0.0,0.0027825271208712365
+density_coupled_scratch_v7,final_density_coupled_scratch,60,60,60,true,297,0.0,0.011014858596354316

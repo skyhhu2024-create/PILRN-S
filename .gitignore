@@ -1,0 +1,10 @@
+__pycache__/
+*.pyc
+*.pth
+*.nc
+data/GRDC_Rine/
+data/river_network_edges.csv
+data/river_network_nodes_v2.csv
+results/figure_source_data/fig06_example_hydrographs_seed42.csv
+outputs/
+.DS_Store

@@ -1,0 +1,4 @@
+contrast,density_percent,paired_median_delta_NSE,paired_median_delta_KGE,pilrn_NSE_win_fraction
+pilrn_final-minus-regional,100,0.0663778265412469,0.0302624094547776,0.7926829268292683
+pilrn_final-minus-regional,50,0.0227191388104237,0.0078787326099084,0.6463414634146342
+pilrn_final-minus-regional,25,0.0037217886376335,3.003822322822369e-08,0.6219512195121951
