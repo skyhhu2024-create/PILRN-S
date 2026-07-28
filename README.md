@@ -25,6 +25,54 @@ provides coverage and stability; concurrent gauge observations provide local,
 event-specific evidence; and the learned gate determines how strongly that
 evidence should revise the prior for each target and month.
 
+## Headline evaluation (manuscript Table 4)
+
+All methods use the same 164 scored gauges and ten fixed leave-station-out
+folds. Values below reproduce manuscript Table 4; stochastic methods report
+the median of five seed-specific station medians. For PILRN-S, “active
+parameters” refers to the Stage-2 fusion correction optimized after the
+86,657-parameter Regional-LSTM prior has been frozen.
+
+| Method | NSE | KGE | PBIAS (%) | FHV (%) | FLV (%) | VR | aNSE | NSE < 0 (%) | NSE > 0.5 (%) | Active parameters | Seeds |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| **PILRN-S** | **0.656** | **0.697** | **−1.9** | **−12.0** | **14.9** | **0.882** | **0.435** | **15.9** | **64.6** | **1,074** | 5 |
+| Regional LSTM | 0.556 | 0.652 | −2.0 | −13.1 | 15.2 | 0.891 | 0.274 | 20.1 | 56.1 | 86,657 | 5 |
+| Nearest+DAR | 0.630 | 0.667 | 2.3 | 0.0 | 10.4 | 1.020 | 0.359 | 32.3 | 55.5 | — | 5 |
+| IDW+DAR | 0.268 | 0.428 | 17.5 | −13.5 | 108.6 | 0.815 | −0.321 | 39.0 | 31.7 | — | 5 |
+| Random forest | 0.604 | 0.655 | −8.7 | −24.8 | 17.5 | 0.780 | 0.353 | 13.4 | 62.2 | — | 5 |
+| Coupled from scratch | 0.660 | 0.687 | −3.2 | −14.1 | 19.1 | 0.863 | 0.438 | 20.1 | 64.0 | 87,763 | 5 |
+| Coupled warm-start | 0.642 | 0.695 | −2.8 | −12.1 | 11.5 | 0.915 | 0.407 | 18.9 | 62.8 | 87,763 | 5 |
+| Embedding-level GAT | 0.627 | 0.672 | −2.3 | −13.4 | 13.9 | 0.905 | 0.331 | 14.6 | 61.6 | 53,761 | 5 |
+
+### What the evidence supports
+
+- **Concurrent observations add useful local information to the regional
+  prior.** PILRN-S raises median NSE from 0.556 to 0.656 and KGE from 0.652 to
+  0.697 relative to the Regional LSTM. The paired station-median NSE gain is
+  +0.050, and 77.4% of gauges improve.
+- **Signal-level routing repairs severe donor incompatibility.** Of the 53
+  gauges where nearest+DAR has negative NSE, PILRN-S restores positive NSE at
+  35, while reducing the overall negative-NSE fraction from 32.3% to 15.9%.
+- **Freezing is an effective optimization constraint, not an accuracy
+  guarantee.** PILRN-S, coupled-from-scratch, and coupled-warm-start have
+  statistically indistinguishable paired central accuracy, while PILRN-S
+  optimizes only the 1,074-parameter fusion correction rather than jointly
+  updating all 87,763 parameters. It also has fewer negative-NSE gauges than
+  either coupled control and lower same-station seed sensitivity.
+- **Explicit river descriptors provide strong parameter efficiency.** The
+  1,074-parameter PILRN-S fusion module reaches the same overall performance
+  range as the 53,761-parameter embedding-level GAT graph module, a 50.1-fold
+  difference in actively optimized Stage-2 parameters.
+- **The supporting experiments define the boundary of the claim.** Removing
+  descriptor-conditioned edge weights reduces NSE/KGE to 0.641/0.684, and
+  PILRN-S remains the strongest non-coupled estimator in the 50% and 25%
+  training-gauge-density experiments. These results support sufficiency and
+  robustness in the evaluated partially gauged setting, not universal
+  superiority over every model or deployment regime.
+
+The corresponding station-level, paired, stability, ablation, and density
+evidence is released under [`results/`](results/).
+
 ## Repository layout
 
 ```
@@ -46,7 +94,7 @@ code/       complete experiment pipeline (Rebuild_v2)
             - run_round_sweep_*.py        1-8 round propagation-depth sweep
             - run_density_*.py            50% / 25% training-gauge-density experiments
             - audit_leakage_physical_v4.py  all-month model-execution leakage audit
-            - evaluate_final_manuscript_v5.py  unified post-processing (Table 3)
+            - evaluate_final_manuscript_v5.py  unified post-processing (manuscript Table 4)
 data/       redistributable derived configuration
             - river_network_nodes_v3.csv / river_network_edges_v3.csv
               (307 candidate-node records, including 8 flagged unmappable;
@@ -58,13 +106,36 @@ data/       redistributable derived configuration
             - station_qc.csv, station_exclude.csv
 results/    verification of every number in the paper without a GRDC licence
             - station_seed_metrics.csv         8 methods x 5 seeds x 164 stations
-            - method_summary.csv, seed_summary.csv, section_5_*.csv (Table 3)
+            - method_summary.csv, seed_summary.csv, section_5_*.csv
+                                              (Table 4 and Sections 5.1-5.3)
             - paired_significance_paperconv_v6.csv  (SI Table S13: CIs, Wilcoxon)
             - stability_evidence.csv, paired_*_evidence.csv (Tables S9-S10)
             - leakage_audit_batches.csv   released all-month audit batch summary
             - figure_source_data/              per-panel source CSVs
             - README.md                   scope and redistribution notes
 ```
+
+## Manuscript-to-release mapping
+
+Some source-data filenames retain figure numbers from an earlier manuscript
+draft for compatibility with the evaluation scripts. The current manuscript
+mapping is:
+
+| Current manuscript item | Released source data |
+|---|---|
+| Table 4 — unified evaluation | `results/method_summary.csv`, `results/station_seed_metrics.csv`, `results/section_5_1_common_metrics.csv` |
+| Figure 4 — non-graph baselines | `results/figure_source_data/fig04_non_graph_common_metrics.csv` |
+| Figure 5 — station-level gains | `results/figure_source_data/fig05_paired_summary.csv`, `fig05_station_median_metrics.csv` |
+| Figure 7 — frozen versus coupled | `results/figure_source_data/fig07_*.csv` |
+| Figure 8 — PILRN-S versus GAT | `results/figure_source_data/fig08_*.csv` |
+| Figure 9 — router interpretability | `results/figure_source_data/Fig09_panel_*.csv` |
+| **Figure 10 — propagation depth and components** | `results/figure_source_data/fig09_round_seed_metrics.csv`, `fig09_component_summary.csv` |
+| **Figure 11 — training-gauge density** | `results/figure_source_data/fig10_density_*.csv` |
+| Figure S1 — closure diagnostic | `results/figure_source_data/FigS1_closure_errors.csv` |
+| Figure S2 — screening thresholds | `results/figure_source_data/FigS2_source.csv` |
+
+Thus, the legacy `fig09_round_*` prefix corresponds to current Figure 10, and
+the legacy `fig10_density_*` prefix corresponds to current Figure 11.
 
 ## Data access (not redistributed here)
 
