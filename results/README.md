@@ -1,8 +1,9 @@
 # Released results
 
-This directory contains derived evaluation products needed to verify the
-reported tables, statistical comparisons, and figures without rerunning the
-licensed discharge data.
+This directory contains the derived evaluations of the original river-only
+model. The revised model uses cross-fitted priors and similarity edges. Its
+Rhine reference values and reproduction commands are in the
+[repository README](../README.md#run-the-revised-rhine-model).
 
 The canonical station-level file is `station_seed_metrics.csv` (eight methods,
 five seeds, and 164 scored stations). `method_summary.csv`,

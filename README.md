@@ -2,33 +2,80 @@
 
 Code, audited configuration data, and results accompanying:
 
-> Chen, M., Li, H., Yong, B., Liao, W., Wang, H. — *Compact signal-level
+> Chen, M., Yong, B., Li, H., Liao, W., Wang, H. — *Compact signal-level
 > river-network routing suffices to fuse frozen regional priors with concurrent
 > observations for monthly streamflow estimation in partially gauged networks*
 
 
-PILRN-S (Positive-weight Interpretable Learnable River-Network router operating
-at the Signal level) corrects a frozen Regional-LSTM runoff-depth prior by
-propagating availability-masked runoff-depth signals through
-descriptor-conditioned positive edge weights and a learned prior–neighbour
-gate. Three propagation rounds are fixed by an outcome-independent graph rule
-(≥95% nearest-visible-donor reachability). Under a strict leave-station-out
-protocol (five seeds × ten fixed folds, 164 quality-controlled Rhine Basin
-gauges, observed discharge as the only reference), optimizing only the
-1,074-parameter Stage-2 fusion correction attains median NSE 0.656 / KGE 0.697
-— statistically indistinguishable from full 87,763-parameter joint
-optimization and comparable to a 53,761-parameter embedding-level GAT —
-while producing fewer negative-NSE gauges and lower seed sensitivity.
+PILRN-S estimates monthly streamflow at a held-out gauge. A frozen Regional
+LSTM supplies a runoff-depth prior. The second stage learns how much to adjust
+that prior using contemporaneous observations on the river network and at
+hydrologically similar gauges. Its training priors are cross-fitted within
+each outer training fold. The model uses three routing rounds, eight explicit
+edge descriptors, a river/similarity edge indicator and a learned fusion gate.
 
-The two information sources have distinct roles. The frozen Regional LSTM
-provides coverage and stability; concurrent gauge observations provide local,
-event-specific evidence; and the learned gate determines how strongly that
-evidence should revise the prior for each target and month.
+## Run the revised Rhine model
+
+Install the packages in `requirements.txt`. Set `GRDC_DIR` to the directory of
+station CSVs and `NC_PATH` to the Rhine ERA5-Land monthly NetCDF. The graph
+and the ten random-gauge folds are included in `data/`.
+
+```bash
+python code/prepare_forcing.py --extract
+python code/run_pilrn_s.py --folds 1 --seeds 42
+python code/evaluate_downstream_masked.py --folds 1 --seeds 42
+```
+
+Run `python code/run_pilrn_s.py` for all ten folds and five seeds. For each
+outer fold the runner fits a regional prior, divides its training gauges into
+five inner groups and obtains an out-of-fold prior for each training gauge.
+Each test gauge receives the outer model's estimate. The router sees the
+cross-fitted priors during training. Random-gauge evaluation retains these
+assembled priors at the non-test gauges and hides test-gauge discharge.
+
+For each target, the model ranks up to eight other candidate gauges by
+catchment attributes and training-period climate, then skips candidates
+already connected by a river edge. The 299-node active Rhine graph has 596
+directed river edges and 2,277 directed similarity edges. The full 307-row
+arrays store another 64 similarity edges ending at eight excluded gauges.
+Similarity edges transmit directly observed runoff depth only. River edges
+can relay an updated signal in a later round. A target without donor support
+retains its prior. The model uses no separate DAR branch.
+
+The standard random-gauge experiment allows observations at eligible
+downstream gauges in the month being estimated. The optional downstream
+replay applies a separate mask for each target to the fitted model over
+April 2016–December 2019. It checks the unrestricted replay against the
+saved predictions and writes paired R, NSE and KGE (2012) to
+`downstream_replay/` under the training output directory. Pass the same
+`--output-root` to both commands when using a custom directory. Both
+experiments estimate discharge in the observation month.
+
+To test the routing and observation rules without licensed input data, run
+`python -m unittest discover -s code -p "test_*.py"` from the repository root.
+
+### Rhine random-gauge reference values
+
+Results below are from revised manuscript Table 4 with downstream observations
+available. The 164 scored gauges are pooled across folds within each seed.
+Metrics are summarized as the median of the five seed-specific summaries.
+
+| Evaluation period | Method | NSE | KGE | R | Gauges with NSE < 0 |
+|---|---|---:|---:|---:|---:|
+| April 1995–December 2019 | PILRN-S | 0.729 | 0.733 | 0.936 | 13.4% |
+| | Regional LSTM | 0.556 | 0.652 | 0.880 | 20.1% |
+| | Nearest+DAR | 0.630 | 0.667 | 0.932 | 32.3% |
+| April 2016–December 2019 | PILRN-S | 0.744 | 0.714 | 0.947 | 14.6% |
+| | Regional LSTM | 0.583 | 0.643 | 0.897 | 21.3% |
+| | Nearest+DAR | 0.612 | 0.607 | 0.945 | 30.5% |
 
 ## Repository layout
 
 ```
-code/       complete experiment pipeline (Rebuild_v2)
+code/       revised PILRN-S and original Rhine experiment pipeline
+            - run_pilrn_s.py              cross-fitted priors and revised signal router
+            - pilrn_similarity.py         similarity graph and observed-donor propagation
+            - evaluate_downstream_masked.py   target-specific downstream replay
             - config_v2.py                paths, features, split definitions
             - prepare_forcing.py          ERA5-Land -> monthly forcing matrix
             - rebuild_network_v3.py       metadata-constrained station-network rebuild
@@ -56,7 +103,7 @@ data/       redistributable derived configuration
             - grdc_official_metadata.csv       official areas/coordinates used for QC
             - area_correction_report.csv       matched vs. official areas (82/207 >30%)
             - station_qc.csv, station_exclude.csv
-results/    verification of every number in the paper without a GRDC licence
+results/    archived evaluations of the original river-only release
             - station_seed_metrics.csv         8 methods x 5 seeds x 164 stations
             - method_summary.csv, seed_summary.csv, section_5_*.csv (Table 3)
             - paired_significance_paperconv_v6.csv  (SI Table S13: CIs, Wilcoxon)
@@ -74,9 +121,9 @@ results/    verification of every number in the paper without a GRDC licence
 | Meteorological forcing (11 variables) | [ERA5-Land monthly](https://cds.climate.copernicus.eu) | 45.5–52.5°N, 5.0–12.5°E, 1990–2025 |
 | River network | [HydroRIVERS v1.0](https://www.hydrosheds.org) | derived graph shipped in `data/` |
 
-## Reproducing the experiments
+## Reproducing the original river-only experiments
 
-The full manuscript-final workflow is available as one sequential,
+The original workflow is available as one sequential,
 resume-safe command:
 
 ```bash
@@ -142,26 +189,26 @@ July 2012–March 2016; outer testing April 2016–December 2019. Headline value
 pool the ten folds within each seed and report the median of the five
 seed-specific station medians.
 
-## Parameter accounting
+## Parameter accounting for the revised model
 
 The parameter-efficiency claim concerns the optimization performed after the
 regional prior is frozen:
 
 | System | Frozen prior | Actively optimized for fusion | Complete stored system |
 |---|---:|---:|---:|
-| PILRN-S | 86,657 | 1,074 | 87,731 |
+| PILRN-S | 86,657 | 1,106 | 87,763 |
 | Coupled from scratch / warm-start | 0 | 87,763 | 87,763 |
 | Embedding-level GAT | 86,657 | 53,761 | 140,418 |
 
-Thus, PILRN-S does not have only 1,074 parameters in total; it reaches the
-accuracy of full joint optimization while optimizing only a 1,074-parameter
-fusion correction after Stage 1 has been trained and frozen.
+The edge-type indicator adds 32 trainable weights to the original 1,074-parameter
+river-only correction. Cross-fitting requires additional regional fits during
+training. The stored-system count covers the outer regional model and the
+router. The auxiliary inner fits generate the cached out-of-fold priors.
 
 ## Requirements
 
 Python ≥ 3.10 with `torch`, `numpy`, `pandas`, `matplotlib`, `xarray`,
-`netCDF4`, `scikit-learn` (see `requirements.txt`). Experiments were run on a
-single consumer GPU; each PILRN-S fold–seed cell trains in under two minutes.
+`netCDF4`, `scikit-learn` (see `requirements.txt`).
 
 ## License and citation
 
